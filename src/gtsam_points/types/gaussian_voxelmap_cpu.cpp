@@ -71,6 +71,10 @@ void GaussianVoxelMapCPU::insert(const PointCloud& frame) {
   IncrementalVoxelMap<GaussianVoxel>::insert(frame);
 }
 
+void GaussianVoxelMapCPU::distance_insert(const PointCloud& frame, const Eigen::Isometry3d& T) {
+  IncrementalVoxelMap<GaussianVoxel>::distance_insert(frame, T);
+}
+
 namespace {
 
 struct GaussianVoxelData {

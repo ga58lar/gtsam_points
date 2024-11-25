@@ -96,7 +96,9 @@ public:
       frames[i] = frame;
 
       auto voxelmap = std::make_shared<gtsam_points::GaussianVoxelMapCPU>(2.0);
-      voxelmap->insert(*frame);
+      voxelmap->set_lru_horizon(20.0);
+      voxelmap->distance_insert(*frame, Eigen::Isometry3d::Identity());
+      std::cout << "Distance insert done" << std::endl;
       voxelmaps[i] = voxelmap;
 
 #ifdef GTSAM_POINTS_USE_CUDA
@@ -104,8 +106,8 @@ public:
       voxelmap_gpu->insert(*frame);
       voxelmaps_gpu[i] = voxelmap_gpu;
 #endif
-
-      viewer->update_drawable("frame_" + std::to_string(i), std::make_shared<glk::PointCloudBuffer>(frame->points, frame->size()), guik::Rainbow());
+      auto voxel_data = voxelmap->voxel_data();
+      viewer->update_drawable("frame_" + std::to_string(i), std::make_shared<glk::PointCloudBuffer>(voxel_data->points, voxel_data->size()), guik::Rainbow());
     }
 
     update_viewer(poses);

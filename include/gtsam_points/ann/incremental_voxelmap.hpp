@@ -66,6 +66,7 @@ public:
   /// @param points Point cloud
   /// @param T      Transformation matrix
   virtual void insert(const PointCloud& points);
+  virtual void distance_insert(const PointCloud& points, const Eigen::Isometry3d& T);
 
   /// @brief  Find k nearest neighbors.
   /// @param pt           Query point

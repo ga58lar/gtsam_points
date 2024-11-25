@@ -26,6 +26,7 @@ public:
 
   /// Insert a point cloud frame into the voxelmap
   virtual void insert(const PointCloud& frame) = 0;
+  virtual void distance_insert(const PointCloud& frame, const Eigen::Isometry3d& T) = 0;
 };
 
 /**

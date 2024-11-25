@@ -68,6 +68,45 @@ void IncrementalVoxelMap<VoxelContents>::insert(const PointCloud& points) {
 }
 
 template <typename VoxelContents>
+void IncrementalVoxelMap<VoxelContents>::distance_insert(const PointCloud& points, const Eigen::Isometry3d& T) {
+  // Insert points to the voxelmap
+  for (size_t i = 0; i < points.size(); i++) {
+    const Eigen::Vector3i coord = fast_floor(points.points[i] * inv_leaf_size).template head<3>();
+
+    auto found = voxels.find(coord);
+    if (found == voxels.end()) {
+      auto voxel = std::make_shared<std::pair<VoxelInfo, VoxelContents>>(VoxelInfo(coord, lru_counter), VoxelContents());
+
+      found = voxels.emplace_hint(found, coord, flat_voxels.size());
+      flat_voxels.emplace_back(voxel);
+    }
+
+    auto& [info, voxel] = *flat_voxels[found->second];
+    info.lru = lru_counter;
+    voxel.add(voxel_setting, points, i);
+  }
+
+  // Remove voxels based on distance to the current ego pose
+  auto remove_counter = std::remove_if(flat_voxels.begin(), flat_voxels.end(), [&](const std::shared_ptr<std::pair<VoxelInfo, VoxelContents>>& voxel) {
+    const Eigen::Vector3d voxel_coord = voxel->first.coord.template cast<double>() * (1.0 / inv_leaf_size);
+    const double distance = (voxel_coord - T.translation()).norm();
+    return distance > lru_horizon;
+  });
+  flat_voxels.erase(remove_counter, flat_voxels.end());
+
+  // Rehash
+  voxels.clear();
+  for (size_t i = 0; i < flat_voxels.size(); i++) {
+    voxels[flat_voxels[i]->first.coord] = i;
+  }
+  
+  // Finalize voxel means and covs
+  for (auto& voxel : flat_voxels) {
+    voxel->second.finalize();
+  }
+}
+
+template <typename VoxelContents>
 size_t IncrementalVoxelMap<VoxelContents>::knn_search(const double* pt, size_t k, size_t* k_indices, double* k_sq_dists, double max_sq_dist) const {
   const Eigen::Vector4d query = (Eigen::Vector4d() << pt[0], pt[1], pt[2], 1.0).finished();
   const Eigen::Vector3i center = fast_floor(query * inv_leaf_size).template head<3>();
